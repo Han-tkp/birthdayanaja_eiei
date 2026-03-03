@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Happy Birthday 🎂🌸</title>
+  <meta name="description" content="A cute birthday surprise just for you 🌸">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Dancing+Script:wght@500;700&family=Mitr:wght@300;400;500&display=swap"
+    rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.163.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.163.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <!-- Three.js canvas – true fullscreen behind everything -->
+  <canvas id="three-canvas"></canvas>
+
+  <!-- Gentle floating hearts -->
+  <div class="floating-hearts" id="hearts-container"></div>
+
+  <div id="app">
+
+    <!-- ══ INTRO: Door standing still, cat waiting beside it ═══════════ -->
+    <div class="panel" :class="state==='intro' ? 'visible':'hidden'"
+      style="justify-content:flex-end; padding-bottom:2.5rem;">
+      <!-- Loading pill while models load -->
+      <div v-if="!doorReady" class="loading-pill" style="margin-bottom:1rem;">
+        <span>🚪</span>
+        <span>กำลังโหลด...</span>
+        <div class="loading-dots"><span></span><span></span><span></span></div>
+      </div>
+
+      <!-- Enter CTA once scene is ready -->
+      <div class="enter-cta" v-if="doorReady">
+        <p class="enter-hint">🐱 น้องแมวรอเธออยู่นะ!</p>
+        <button class="btn-enter" id="enter-btn" @click="enterSite" :disabled="zooming">
+          <span v-if="!zooming">เข้ามาเลย! 🌸</span>
+          <span v-else>กำลังเข้าไป... ✨</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ══ CAT: Cat slides in with greeting ══════════════════════════ -->
+    <div class="panel" :class="state==='cat' ? 'visible':'hidden'"
+      style="justify-content:flex-end; padding-bottom:2.5rem;">
+      <div class="speech-card cat-card">
+        <div class="cat-bubble">
+          <p class="cat-says">สวัสดี! ฉันมาส่งของขวัญพิเศษให้เธอ 🎁</p>
+        </div>
+        <button class="btn-enter" style="margin-top:1rem;" @click="goBirthday">ดูเลย! 💌</button>
+      </div>
+    </div>
+
+    <!-- ══ BIRTHDAY: Main interaction ════════════════════════════════ -->
+    <div class="panel" :class="state==='birthday' ? 'visible':'hidden'">
+      <div class="birthday-card">
+        <h1>🎂 Happy Birthday!</h1>
+        <p class="subtitle">วันนี้เป็นวันพิเศษของเธอ — เธอมีความสุขไหม? 🌸</p>
+        <img :src="currentGif" alt="cute gif" class="birthday-gif">
+        <div class="btns">
+          <button class="btn-yes" :style="{fontSize: yesBtnSize+'px'}" id="yes-btn" @click="yesClick">
+            มีความสุขมาก 🎉
+          </button>
+          <button v-if="noCount < 4" class="btn-no" id="no-btn" @click="noClick">
+            ยังไม่ค่อย 😢
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ CAT TAUNT: Clicked Yes too fast! ══════════════════════════ -->
+    <div class="panel" :class="state==='catTaunt' ? 'visible':'hidden'"
+      style="justify-content:flex-end; padding-bottom:2.5rem;">
+      <div class="speech-card taunt-card">
+        <div class="cat-bubble taunt-bubble">
+          <p class="taunt-emoji">😾 ฮั่นแน่!</p>
+          <img src="https://media.tenor.com/w2340rodldAAAAAC/im-sulking.gif" alt="sulking cat"
+            style="width:120px; border-radius:12px; margin:0 auto 10px auto;">
+          <p class="cat-says">"ไม่ยอมเล่นด้วยเลยหรอ... เล่นตัวหน่อยสิ" 😤</p>
+        </div>
+        <button class="btn-enter" style="margin-top:1rem; background:linear-gradient(135deg,#ff69b4,#c2177a);"
+          @click="goPlayAlong">
+          โอเค เล่นด้วย! 😅
+        </button>
+      </div>
+    </div>
+
+    <!-- ══ CELEBRATE ══════════════════════════════════════════════════ -->
+    <div class="panel celebrate-panel" :class="state==='celebrate' ? 'visible':'hidden'">
+      <div class="celebrate-card">
+        <div class="confetti-container" id="confetti-container"></div>
+        <h1>🎊 เย่เย่เย่!</h1>
+        <p style="font-family:'Dancing Script',cursive; font-size:1.5rem; color:#e91e8c; margin:.5rem 0;">
+          ขอให้วันเกิดปีนี้สดใสนะ 💕
+        </p>
+        <img :src="celebGif" alt="celebrate" class="birthday-gif">
+        <button class="btn-home" @click="goHome">🏠 กลับหน้าแรก</button>
+      </div>
+    </div>
+
+  </div><!-- #app -->
+
+  <script type="module" src="scene.js"></script>
+
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      const { createApp, ref } = Vue;
+
+      const gifs = [
+        'https://media.tenor.com/76BaX0eo304AAAAj/kitty-kitty-heart.gif',
+        'https://media1.tenor.com/m/wVAjxnPa81IAAAAd/cat-cat-gif.gif',
+        'https://media1.tenor.com/m/f6ts3WWJa-8AAAAC/funny-cats-funny.gif',
+        'https://media1.tenor.com/m/kEZzd8WrRpAAAAAC/peach-peach-and-goma.gif',
+        'https://media.tenor.com/C35t4Pf5GlgAAAAi/peach-and-goma-cute.gif',
+      ];
+      const celebGif = 'https://media.giphy.com/media/3oriO0OEd9QIDdllqo/giphy.gif';
+
+      createApp({
+        setup() {
+          const state = ref('intro');
+          const doorReady = ref(false);
+          const zooming = ref(false);
+          const noCount = ref(0);
+          const yesBtnSize = ref(17);
+          const currentGif = ref(gifs[0]);
+          const hadTaunt = ref(false);
+
+          // Scene ready: fires when both door + cat models are loaded
+          document.addEventListener('sceneReady', () => { doorReady.value = true; });
+          setTimeout(() => { doorReady.value = true; }, 500);
+
+          // ── Enter: play door animation then zoom through ─────────────
+          function enterSite() {
+            if (zooming.value) return;
+            zooming.value = true;
+            const ts = window.threeScene;
+            if (ts && ts.enterDoor) {
+              ts.enterDoor(() => {
+                state.value = 'cat';
+                zooming.value = false;
+                ts.showCat(null);
+              });
+            } else {
+              state.value = 'cat';
+              zooming.value = false;
+            }
+          }
+
+          // ── Cat intro → Birthday ────────────────────────────────────
+          function goBirthday() {
+            state.value = 'birthday';
+            window.threeScene?.showBirthday();
+          }
+
+          // ── Yes click: taunt if first try, otherwise celebrate ──────
+          function yesClick() {
+            if (noCount.value === 0 && !hadTaunt.value) {
+              // First click without pressing No → cat taunts!
+              hadTaunt.value = true;
+              state.value = 'catTaunt';
+              window.threeScene?.showCatTaunt();
+            } else {
+              // Properly earned the yes, or already been taunted
+              state.value = 'celebrate';
+              window.threeScene?.showCelebrate();
+              setTimeout(spawnConfetti, 150);
+              spawnHearts();
+            }
+          }
+
+          // ── Cat says "play along" – back to birthday ────────────────
+          function goPlayAlong() {
+            state.value = 'birthday';
+            window.threeScene?.showBirthday();
+            // Reset no button so player HAS to press No at least once
+            // (hadTaunt is already true so next yes goes straight to celebrate)
+          }
+
+          // ── No click ─────────────────────────────────────────────────
+          function noClick() {
+            if (noCount.value < gifs.length - 1) {
+              noCount.value++;
+              currentGif.value = gifs[noCount.value];
+            }
+            yesBtnSize.value += 6;
+          }
+
+          // ── Home ─────────────────────────────────────────────────────
+          function goHome() { window.location.reload(); }
+
+          // ── Confetti ─────────────────────────────────────────────────
+          function spawnConfetti() {
+            const c = document.getElementById('confetti-container');
+            if (!c) return;
+            const cols = ['#ff69b4', '#ffb6c1', '#e91e8c', '#ff85c2', '#ffd700', '#fff'];
+            for (let i = 0; i < 90; i++) {
+              const el = document.createElement('div');
+              el.className = 'confetti-piece';
+              el.style.left = Math.random() * 100 + '%';
+              el.style.top = '-10px';
+              el.style.background = cols[Math.floor(Math.random() * cols.length)];
+              el.style.width = (Math.random() * 8 + 5) + 'px';
+              el.style.height = (Math.random() * 8 + 5) + 'px';
+              el.style.borderRadius = Math.random() > .5 ? '50%' : '3px';
+              el.style.animationDuration = (Math.random() * 2 + 2) + 's';
+              el.style.animationDelay = (Math.random()) + 's';
+              c.appendChild(el);
+              setTimeout(() => el.remove(), 4500);
+            }
+          }
+
+          // ── Heart burst ───────────────────────────────────────────────
+          function spawnHearts() {
+            const c = document.getElementById('hearts-container');
+            if (!c) return;
+            const emojis = ['💕', '💖', '💗', '💓', '🌸', '✨', '🎀'];
+            for (let i = 0; i < 22; i++) {
+              const h = document.createElement('div');
+              h.className = 'heart';
+              h.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+              h.style.left = Math.random() * 100 + '%';
+              h.style.fontSize = (Math.random() * .9 + .7) + 'rem';
+              h.style.animationDuration = (Math.random() * 3 + 4) + 's';
+              h.style.animationDelay = (Math.random() * 1.5) + 's';
+              c.appendChild(h);
+              setTimeout(() => h.remove(), 8000);
+            }
+          }
+
+          // ── Ambient hearts ────────────────────────────────────────────
+          setInterval(() => {
+            const c = document.getElementById('hearts-container');
+            if (!c) return;
+            const emojis = ['💕', '🌸', '✨', '💖'];
+            const h = document.createElement('div');
+            h.className = 'heart';
+            h.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+            h.style.left = Math.random() * 100 + '%';
+            h.style.fontSize = (Math.random() * .4 + .55) + 'rem';
+            h.style.animationDuration = (Math.random() * 4 + 5) + 's';
+            h.style.opacity = '0.4';
+            c.appendChild(h);
+            setTimeout(() => h.remove(), 10000);
+          }, 1400);
+
+          return {
+            state, doorReady, zooming, noCount, yesBtnSize, currentGif, celebGif,
+            enterSite, goBirthday, yesClick, goPlayAlong, noClick, goHome,
+          };
+        },
+      }).mount('#app');
+    });
+  </script>
+
+</body>
+
+</html>
