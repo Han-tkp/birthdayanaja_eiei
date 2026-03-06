@@ -1,161 +1,204 @@
-/* ─── app.js – Vue 3 (CDN global build) ─── */
-(function () {
-    'use strict';
+window.addEventListener('DOMContentLoaded', () => {
+    const { createApp, ref, computed } = Vue;
 
-    // ── Config – แก้ชื่อได้ที่นี่ ──────────────────────────────────────
-    const CONFIG = {
-        recipientName: 'Happy Birthday',  // ชื่อผู้รับ
-        senderName: 'คนที่รักเธอ',
-    };
+    const birthdayStages = [
+        { txt: '-ขอให้มีความสุข อะไรที่ทำให้รอยยิ้มเธอหาย ก็ขอให้ฮีลใจได้เร็วๆ', img: 'pictures/ฉากอวยพรแรก.jpeg' },
+        { txt: '-ขอให้เธอสมหวังในสิ่งที่เธอปรารถนาทุกสิ่ง', img: 'pictures/ฉากอวยพรแรก.jpeg' },
+        { txt: '-ขอให้เจอคนที่เข้ามาในชีวิตเธอ ไม่ทำร้ายเธอ ใจดีกับเธอ', img: 'pictures/ฉากอวยพรแรก.jpeg' },
+        { txt: '-ขอให้เจอคนที่พร้อมจะรับเธอได้ จริงใจ ไม่ทำให้เธอมีน้ำตา ไม่ทำร้ายเธอ', img: 'pictures/ฉากอวยพร.jpeg' },
+        { txt: '-ขอให้สิ่งที่เธอกังวล หรือไม่สบายใจค่อยๆหายไป', img: 'pictures/ฉากอวยพร.jpeg' },
+        { txt: '-ขอให้ได้ไปจีน ไปดูหิมะกับฉัน55555', img: 'pictures/ฉากอวยพร.jpeg' },
+        { txt: 'สุดท้ายขอให้ยังสนิทกันเหมือนเดิมและตลอดไป ไม่มีใครคนใดคนหนึ่งหายไปจากชีวิตใครก่อน อยู่เป็นพลังบวกให้กันก่อน อยู่ดูฉันแต่งงานก่อน อยู่ดูฉันมีลูกก่อน แน่นอนว่าฉันก็จะอยู่ดูเธอเหมือนกันน่ะยัยเด่กก เลิปยูวยัยเด่กกก💗🤏🏻', img: 'pictures/ฉากสุดท้าย.jpeg' }
+    ];
 
-    const { createApp, ref, computed, onMounted } = Vue;
+    const fullEnvelopeText = `หว๊าาา โตขึ้นอีกปีแล้วน่ะ ก็ไม่มีอะไรมาก
+แค่อยากบอกว่ามีความสุขเยอะๆน่ะ ให้เยอะกว่าปีก่อน แล้วก็ปีต่อๆไปก็ขอให้เยอะขึ้นไปอีก เพราะเธอมันเหมาะกับรอยยิ้มที่สุดแล้ว จะบอกว่าดีใจมากๆที่ได้รู้จักกัน ยัยเด่กพลังบวก ยัยบื้อ ยัยซน ของเจ้ 
+ไม่เคยเสียดายหรือเสียใจเลยที่ได้รู้จักเธอ จะไม่ขออะไรมากเลยย`;
 
     createApp({
         setup() {
-            const nameChars = computed(() => CONFIG.recipientName.split(''));
+            // Scene Management
+            // scene0: Intro -> scene1: Door -> scene2: Envelope -> scene3: Interactive -> scene4: Celebrate
+            const state = ref('scene0');
 
-            const gifs = [
-                'https://media.tenor.com/76BaX0eo304AAAAj/kitty-kitty-heart.gif',
-                'https://media1.tenor.com/m/wVAjxnPa81IAAAAd/cat-cat-gif.gif',
-                'https://media1.tenor.com/m/f6ts3WWJa-8AAAAC/funny-cats-funny.gif',
-                'https://media1.tenor.com/m/kEZzd8WrRpAAAAAC/peach-peach-and-goma.gif',
-                'https://media.tenor.com/C35t4Pf5GlgAAAAi/peach-and-goma-cute.gif',
-            ];
-            const celebGif = 'https://media.giphy.com/media/3oriO0OEd9QIDdllqo/giphy.gif';
+            const threeReady = ref(false);
+            const zooming = ref(false);
 
-            const noCount = ref(0);
-            const yesBtnSize = ref(18);
-            const currentGif = ref(gifs[0]);
-            const answered = ref(false);
+            // Scene 2 references
+            const displayedEnvelopeText = ref('');
+            const envelopeDone = ref(false);
+            let typewriterTimer = null;
 
-            function yesClick() {
-                answered.value = true;
-                setTimeout(spawnConfetti, 100);
+            // Scene 3 references
+            const stageIndex = ref(0);
+            const yesBtnSize = ref(16);
+            const yesBtnPaddingX = ref(28);
+            const yesBtnPaddingY = ref(12);
+
+            // Wait for Three.js (Cat or Room loaded)
+            document.addEventListener('threeReady', () => { threeReady.value = true; });
+            setTimeout(() => { threeReady.value = true; }, 1500); // Safety fallback
+
+            // --- Scene Actions ---
+
+            function startDoorScene() {
+                state.value = 'scene1';
             }
 
-            function noClick() {
-                if (noCount.value < gifs.length - 1) {
-                    noCount.value++;
-                    currentGif.value = gifs[noCount.value];
+            function enterDoor() {
+                if (zooming.value) return;
+                zooming.value = true;
+
+                const ts = window.threeScene;
+                if (ts && ts.enterDoor) {
+                    ts.enterDoor(() => {
+                        state.value = 'scene2';
+                        zooming.value = false;
+                        startTypewriter();
+                    });
+                } else {
+                    // Fallback if Three.js fails
+                    state.value = 'scene2';
+                    zooming.value = false;
+                    startTypewriter();
                 }
-                yesBtnSize.value += 8;
             }
 
-            function resetApp() {
-                noCount.value = 0;
-                yesBtnSize.value = 18;
-                currentGif.value = gifs[0];
-                answered.value = false;
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+            function startTypewriter() {
+                let i = 0;
+                displayedEnvelopeText.value = '';
+                envelopeDone.value = false;
+
+                // Show Envelope in 3D scene
+                if (window.threeScene?.showEnvelope) {
+                    window.threeScene.showEnvelope();
+                }
+
+                typewriterTimer = setInterval(() => {
+                    if (i <= fullEnvelopeText.length) {
+                        const currentText = fullEnvelopeText.substring(0, i);
+                        displayedEnvelopeText.value = currentText + '<span class="animate-pulse font-bold text-pink-deep">|</span>';
+                        i++;
+                    } else {
+                        clearInterval(typewriterTimer);
+                        displayedEnvelopeText.value = fullEnvelopeText;
+                        envelopeDone.value = true;
+                    }
+                }, 40); // Speed of typing
             }
+
+            function skipTypewriter() {
+                if (typewriterTimer) clearInterval(typewriterTimer);
+                displayedEnvelopeText.value = fullEnvelopeText;
+                envelopeDone.value = true;
+
+                // Fast forward the 3D envelope to its final typing phase position if needed
+                if (window.threeScene?.fastForwardEnvelope) {
+                    window.threeScene.fastForwardEnvelope();
+                }
+            }
+
+            function goInteractiveScene() {
+                state.value = 'scene3';
+                if (window.threeScene?.hideEnvelope) {
+                    window.threeScene.hideEnvelope();
+                }
+            }
+
+            function answerClick(isYes) {
+                // If they click No (isYes=false) or even Yes, we progress either way to show all messages
+                // But if No, the Yes button grows larger
+                if (!isYes) {
+                    yesBtnSize.value += 4;
+                    yesBtnPaddingX.value += 6;
+                    yesBtnPaddingY.value += 2;
+                } else {
+                    // Optionally do something if Yes is clicked
+                }
+
+                if (stageIndex.value < birthdayStages.length - 1) {
+                    stageIndex.value++;
+                }
+            }
+
+            function startCelebrate() {
+                state.value = 'scene4';
+                if (window.threeScene?.showCelebrate) {
+                    window.threeScene.showCelebrate();
+                }
+                setTimeout(spawnConfetti, 150);
+                spawnHearts();
+            }
+
+            function goHome() { window.location.reload(); }
+
+            // --- Computeds ---
+
+            const currentStage = computed(() => birthdayStages[stageIndex.value]);
+            const isFinalStage = computed(() => stageIndex.value === birthdayStages.length - 1);
+            const yesBtnPadding = computed(() => `${yesBtnPaddingY.value}px ${yesBtnPaddingX.value}px`);
+
+            // --- Decor & Effects ---
 
             function spawnConfetti() {
-                const container = document.getElementById('confetti-container');
-                if (!container) return;
-                const colors = ['#e91e8c', '#ff85c2', '#9c27b0', '#ce93d8', '#ffd700', '#fff'];
+                const c = document.getElementById('confetti-container');
+                if (!c) return;
+                const cols = ['#ff69b4', '#ffb6c1', '#e91e8c', '#ff85c2', '#ffd700', '#fff'];
                 for (let i = 0; i < 90; i++) {
                     const el = document.createElement('div');
-                    el.className = 'confetti-piece';
+                    el.className = 'absolute rounded-sm animate-[confettiFall_linear_forwards]';
                     el.style.left = Math.random() * 100 + '%';
                     el.style.top = '-10px';
-                    el.style.background = colors[Math.floor(Math.random() * colors.length)];
+                    el.style.backgroundColor = cols[Math.floor(Math.random() * cols.length)];
                     el.style.width = (Math.random() * 8 + 5) + 'px';
                     el.style.height = (Math.random() * 8 + 5) + 'px';
                     el.style.borderRadius = Math.random() > .5 ? '50%' : '3px';
                     el.style.animationDuration = (Math.random() * 2 + 2.5) + 's';
-                    el.style.animationDelay = (Math.random() * 1.2) + 's';
-                    container.appendChild(el);
-                    setTimeout(() => el.remove(), 5000);
+                    el.style.animationDelay = (Math.random()) + 's';
+                    c.appendChild(el);
+                    setTimeout(() => el.remove(), 4500);
                 }
             }
 
-            onMounted(() => {
-                initParticleCanvas();
-                initPetals();
-                initBentoReveal();
-                initCardMouse();
-            });
+            function spawnHearts() {
+                const c = document.getElementById('hearts-container');
+                if (!c) return;
+                const emojis = ['💕', '💖', '💗', '💓', '🌸', '✨', '🎀'];
+                for (let i = 0; i < 22; i++) {
+                    const h = document.createElement('div');
+                    h.className = 'absolute -top-10 animate-[floatHeart_linear_infinite]';
+                    h.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+                    h.style.left = Math.random() * 100 + '%';
+                    h.style.fontSize = (Math.random() * .9 + .7) + 'rem';
+                    h.style.animationDuration = (Math.random() * 3 + 4) + 's';
+                    h.style.animationDelay = (Math.random() * 1.5) + 's';
+                    c.appendChild(h);
+                    setTimeout(() => h.remove(), 8000);
+                }
+            }
 
-            return { nameChars, currentGif, celebGif, noCount, yesBtnSize, answered, yesClick, noClick, resetApp };
+            // Ambient background hearts
+            setInterval(() => {
+                const c = document.getElementById('hearts-container');
+                if (!c) return;
+                const emojis = ['💕', '🌸', '✨', '💖'];
+                const h = document.createElement('div');
+                h.className = 'absolute -top-10 animate-[floatHeart_linear_infinite] opacity-40';
+                h.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+                h.style.left = Math.random() * 100 + '%';
+                h.style.fontSize = (Math.random() * .4 + .55) + 'rem';
+                h.style.animationDuration = (Math.random() * 4 + 7) + 's';
+                c.appendChild(h);
+                setTimeout(() => h.remove(), 11000);
+            }, 1400);
+
+            return {
+                state, threeReady, zooming,
+                displayedEnvelopeText, envelopeDone,
+                stageIndex, currentStage, isFinalStage, yesBtnSize, yesBtnPadding,
+                startDoorScene, enterDoor, goInteractiveScene, answerClick, startCelebrate, goHome,
+                skipTypewriter
+            };
         },
     }).mount('#app');
-
-    /* ── 2D Particle Canvas (background stars) ─────────────────────── */
-    function initParticleCanvas() {
-        const cv = document.getElementById('particle-canvas');
-        if (!cv) return;
-        const ctx = cv.getContext('2d');
-        const setSize = () => { cv.width = window.innerWidth; cv.height = window.innerHeight; };
-        setSize();
-        window.addEventListener('resize', setSize);
-
-        const stars = Array.from({ length: 80 }, () => ({
-            x: Math.random() * cv.width,
-            y: Math.random() * cv.height,
-            r: Math.random() * 1.8 + .3,
-            dx: (Math.random() - .5) * .3,
-            dy: (Math.random() - .5) * .3,
-            op: Math.random() * .5 + .2,
-            col: ['#ff85c2', '#ce93d8', '#ffd700', '#fff', '#ffb3d9'][Math.floor(Math.random() * 5)],
-        }));
-
-        (function draw() {
-            ctx.clearRect(0, 0, cv.width, cv.height);
-            stars.forEach(s => {
-                ctx.beginPath();
-                ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-                ctx.fillStyle = s.col;
-                ctx.globalAlpha = s.op;
-                ctx.fill();
-                s.x += s.dx; s.y += s.dy;
-                if (s.x < 0 || s.x > cv.width) s.dx *= -1;
-                if (s.y < 0 || s.y > cv.height) s.dy *= -1;
-            });
-            requestAnimationFrame(draw);
-        })();
-    }
-
-    /* ── Floating Petals ────────────────────────────────────────────── */
-    function initPetals() {
-        const container = document.getElementById('petals-container');
-        if (!container) return;
-        const colors = ['#ff85c2', '#ce93d8', '#ff4081', '#ffb3d9', '#ffd7ec'];
-        for (let i = 0; i < 18; i++) {
-            const p = document.createElement('div');
-            p.className = 'petal';
-            const size = Math.random() * 10 + 6;
-            p.style.left = Math.random() * 100 + '%';
-            p.style.width = p.style.height = size + 'px';
-            p.style.background = colors[Math.floor(Math.random() * colors.length)];
-            p.style.animationDuration = (Math.random() * 8 + 7) + 's';
-            p.style.animationDelay = (Math.random() * 8) + 's';
-            p.style.opacity = (Math.random() * .4 + .3).toString();
-            container.appendChild(p);
-        }
-    }
-
-    /* ── Bento Reveal via IntersectionObserver ──────────────────────── */
-    function initBentoReveal() {
-        const cards = document.querySelectorAll('[data-reveal]');
-        const obs = new IntersectionObserver((entries) => {
-            entries.forEach((e, i) => {
-                if (e.isIntersecting) {
-                    setTimeout(() => e.target.classList.add('revealed'), i * 110);
-                }
-            });
-        }, { threshold: .15 });
-        cards.forEach(c => obs.observe(c));
-    }
-
-    /* ── Mouse Parallax Glow on Cards ──────────────────────────────── */
-    function initCardMouse() {
-        document.querySelectorAll('.bento-card').forEach(card => {
-            card.addEventListener('mousemove', e => {
-                const r = card.getBoundingClientRect();
-                card.style.setProperty('--mx', ((e.clientX - r.left) / r.width * 100).toFixed(1) + '%');
-                card.style.setProperty('--my', ((e.clientY - r.top) / r.height * 100).toFixed(1) + '%');
-            });
-        });
-    }
-
-})();
+});

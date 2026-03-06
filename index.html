@@ -11,6 +11,46 @@
     href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Dancing+Script:wght@500;700&family=Mitr:wght@300;400;500&display=swap"
     rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        screens: {
+          'tablet': '768px',
+          'desktop': '992px',
+          'xl_desktop': '1200px',
+        },
+        extend: {
+          colors: {
+            pink: {
+              DEFAULT: '#ff69b4',
+              deep: '#e91e8c',
+              soft: '#ffb6c1',
+              pale: '#ffe4ec',
+              light: '#fff0f6',
+              rose: '#ff85c2',
+            },
+            text: {
+              DEFAULT: '#3d1a2e',
+              mid: '#7a4066',
+              muted: '#b07898',
+            }
+          },
+          boxShadow: {
+            'pink': '0 4px 20px rgba(255, 105, 180, .25)',
+            'pink-lg': '0 10px 40px rgba(255, 105, 180, .25)',
+            'pink-deep': '0 10px 44px rgba(233, 30, 140, .3)',
+            'btn': '0 8px 24px rgba(233, 30, 140, .3)',
+            'btn-hover': '0 10px 28px rgba(233, 30, 140, .3)',
+            'btn-soft': '0 6px 20px rgba(233, 30, 140, .3)',
+          },
+          fontFamily: {
+            sans: ['Mitr', 'Sarabun', 'sans-serif'],
+            dancing: ['Dancing Script', 'cursive'],
+          }
+        }
+      }
+    }
+  </script>
   <script type="importmap">
   {
     "imports": {
@@ -21,249 +61,287 @@
   </script>
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="cat/cat.css">
+  <style>
+    /* Sparkle effect during animation */
+    .sparkle-text {
+      animation: textSparkle 1.5s ease-in-out infinite alternate;
+    }
+
+    @keyframes textSparkle {
+      0% {
+        text-shadow: 0 0 5px #ffb6c1, 0 0 10px #ff69b4, 0 0 20px #ff69b4;
+        color: #7a4066;
+      }
+
+      100% {
+        text-shadow: 0 0 10px #e91e8c, 0 0 20px #e91e8c, 0 0 30px #e91e8c;
+        color: #e91e8c;
+      }
+    }
+  </style>
 </head>
 
-<body>
+<body class="w-full h-[100dvh] bg-pink-light font-sans overflow-hidden text-text m-0 p-0">
 
   <!-- Three.js canvas – true fullscreen behind everything -->
-  <canvas id="three-canvas"></canvas>
+  <canvas id="three-canvas" class="fixed inset-0 w-full h-full z-[1] block"></canvas>
 
   <!-- Gentle floating hearts -->
-  <div class="floating-hearts" id="hearts-container"></div>
+  <div class="fixed inset-0 pointer-events-none z-[2] overflow-hidden" id="hearts-container"></div>
 
-  <div id="app">
+  <div id="app" class="fixed inset-0 z-10 pointer-events-none">
 
-    <!-- ══ INTRO: Door standing still, cat waiting beside it ═══════════ -->
-    <div class="panel" :class="state==='intro' ? 'visible':'hidden'"
-      style="justify-content:flex-end; padding-bottom:2.5rem;">
+    <!-- ══ SCENE 0: Intro image and text ═══════════ -->
+    <div class="panel absolute inset-0 flex flex-col items-center justify-center bg-pink-light z-20"
+      :class="state==='scene0' ? 'visible':'hidden'" @click="startDoorScene">
+      <img src="pictures/ฉากแรกเย้ๆ.jpg"
+        onerror="this.src='https://media.tenor.com/76BaX0eo304AAAAj/kitty-kitty-heart.gif'" alt="Intro"
+        class="w-[clamp(240px,70vw,400px)] h-[clamp(240px,70vw,400px)] object-cover rounded-2xl shadow-pink-lg mb-6 border-4 border-white animate-[popIn_1s_ease-out]">
+      <p
+        class="font-dancing text-[clamp(1.8rem,5vw,2.5rem)] text-pink-deep animate-[pulse_2s_ease_infinite] drop-shadow-md">
+        Happy birthday ยัยเด่ก🎂</p>
+      <p class="mt-8 text-text-muted text-sm animate-bounce cursor-pointer opacity-70">(แตะหน้าจอเพื่อไปต่อ)</p>
+    </div>
+
+    <!-- ══ SCENE 1: Door standing still ═══════════ -->
+    <div class="panel absolute inset-0 flex flex-col items-center gap-[1.2rem] justify-end pb-10"
+      :class="state==='scene1' ? 'visible':'hidden'">
       <!-- Loading pill while models load -->
-      <div v-if="!doorReady" class="loading-pill" style="margin-bottom:1rem;">
+      <div v-if="!threeReady"
+        class="flex items-center gap-3 bg-white/80 backdrop-blur-md border-2 border-pink-soft rounded-full px-7 py-3 text-pink-deep shadow-pink font-sans mb-4 pointer-events-auto">
         <span>🚪</span>
-        <span>กำลังโหลด...</span>
-        <div class="loading-dots"><span></span><span></span><span></span></div>
+        <span>กำลังเตรียมห้องให้...</span>
+        <div class="flex gap-1">
+          <span class="w-[7px] h-[7px] rounded-full bg-pink animate-[dotBounce_1.2s_ease_infinite]"></span>
+          <span class="w-[7px] h-[7px] rounded-full bg-pink animate-[dotBounce_1.2s_ease_infinite_0.18s]"></span>
+          <span class="w-[7px] h-[7px] rounded-full bg-pink animate-[dotBounce_1.2s_ease_infinite_0.36s]"></span>
+        </div>
       </div>
 
       <!-- Enter CTA once scene is ready -->
-      <div class="enter-cta" v-if="doorReady">
-        <p class="enter-hint">🐱 น้องแมวรอเธออยู่นะ!</p>
-        <button class="btn-enter" id="enter-btn" @click="enterSite" :disabled="zooming">
-          <span v-if="!zooming">เข้ามาเลย! 🌸</span>
+      <div
+        class="absolute bottom-10 left-0 right-0 flex flex-col items-center gap-3 pointer-events-auto animate-[slideUp_0.6s_cubic-bezier(0.175,0.885,0.32,1.275)_both]"
+        v-if="threeReady">
+        <button
+          class="bg-gradient-to-br from-pink to-pink-deep text-white border-none rounded-full py-3 px-8 text-[16px] font-sans cursor-pointer shadow-btn transition-all duration-300 pointer-events-auto hover:scale-105 hover:shadow-btn-hover hover:animate-none animate-[pulse_2s_ease_infinite] tablet:text-[19px] tablet:py-[15px] tablet:px-[44px]"
+          id="enter-btn" @click="enterDoor" :disabled="zooming">
+          <span v-if="!zooming">เปิดประตู! 🚪</span>
           <span v-else>กำลังเข้าไป... ✨</span>
         </button>
       </div>
     </div>
 
-    <!-- ══ CAT: Cat slides in with greeting ══════════════════════════ -->
-    <div class="panel" :class="state==='cat' ? 'visible':'hidden'"
-      style="justify-content:flex-end; padding-bottom:2.5rem;">
-      <div class="speech-card cat-card">
-        <div class="cat-bubble">
-          <p class="cat-says">สวัสดี! ฉันมาส่งของขวัญพิเศษให้เธอ 🎁</p>
+    <!-- ══ SCENE 2: The Envelope & Message ═══════════ -->
+    <div class="panel absolute inset-0 flex flex-col items-center justify-end pb-12"
+      :class="state==='scene2' ? 'visible':'hidden'">
+
+      <!-- HANGING CAT -->
+      <div v-show="state==='scene2'"
+        class="absolute -top-10 left-0 w-full flex justify-center pointer-events-none z-[5] opacity-100 scale-75 tablet:scale-100">
+        <div class="all-wrap">
+          <div class="all">
+            <div class="cat-wrap">
+              <div class="cat">
+                <div class="cat-upper">
+                  <div class="cat-leg"></div>
+                  <div class="cat-leg"></div>
+                  <div class="cat-head">
+                    <div class="cat-ears">
+                      <div class="cat-ear"></div>
+                      <div class="cat-ear"></div>
+                    </div>
+                    <div class="cat-face">
+                      <div class="cat-eyes"></div>
+                      <div class="cat-mouth"></div>
+                      <div class="cat-whiskers"></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="cat-lower-wrap">
+                  <div class="cat-lower">
+                    <div class="cat-leg">
+                      <div class="cat-leg">
+                        <div class="cat-leg">
+                          <div class="cat-leg">
+                            <div class="cat-leg">
+                              <div class="cat-leg">
+                                <div class="cat-leg">
+                                  <div class="cat-leg">
+                                    <div class="cat-leg">
+                                      <div class="cat-leg">
+                                        <div class="cat-leg">
+                                          <div class="cat-leg">
+                                            <div class="cat-leg">
+                                              <div class="cat-leg">
+                                                <div class="cat-leg">
+                                                  <div class="cat-leg">
+                                                    <div class="cat-paw"></div>
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="cat-leg">
+                      <div class="cat-leg">
+                        <div class="cat-leg">
+                          <div class="cat-leg">
+                            <div class="cat-leg">
+                              <div class="cat-leg">
+                                <div class="cat-leg">
+                                  <div class="cat-leg">
+                                    <div class="cat-leg">
+                                      <div class="cat-leg">
+                                        <div class="cat-leg">
+                                          <div class="cat-leg">
+                                            <div class="cat-leg">
+                                              <div class="cat-leg">
+                                                <div class="cat-leg">
+                                                  <div class="cat-leg">
+                                                    <div class="cat-paw"></div>
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="cat-tail">
+                      <div class="cat-tail">
+                        <div class="cat-tail">
+                          <div class="cat-tail">
+                            <div class="cat-tail">
+                              <div class="cat-tail">
+                                <div class="cat-tail">
+                                  <div class="cat-tail">
+                                    <div class="cat-tail">
+                                      <div class="cat-tail">
+                                        <div class="cat-tail">
+                                          <div class="cat-tail">
+                                            <div class="cat-tail">
+                                              <div class="cat-tail">
+                                                <div class="cat-tail">
+                                                  <div class="cat-tail -end"></div>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-        <button class="btn-enter" style="margin-top:1rem;" @click="goBirthday">ดูเลย! 💌</button>
+      </div>
+      <!-- END HANGING CAT -->
+
+      <div
+        class="w-[min(480px,94vw)] bg-white/95 backdrop-blur-md border-[3px] border-dashed border-pink.deep rounded-[24px] px-6 py-6 text-center shadow-pink-lg pointer-events-auto z-10 animate-[popIn_0.5s_cubic-bezier(0.175,0.885,0.32,1.275)_both]">
+        <div
+          class="text-[clamp(14px,3vw,17px)] text-text-mid leading-[1.8] min-h-[140px] text-left whitespace-pre-wrap font-sans transition-all duration-300"
+          :class="{'sparkle-text': !envelopeDone}" v-html="displayedEnvelopeText"></div>
+        <div class="mt-4 flex justify-center gap-3">
+          <button v-if="!envelopeDone"
+            class="bg-white text-pink border-2 border-pink rounded-full py-2 px-5 text-[14px] font-sans cursor-pointer transition-all hover:bg-pink hover:text-white"
+            @click="skipTypewriter">ข้ามแอนิเมชัน ⏩</button>
+          <button v-if="envelopeDone"
+            class="bg-gradient-to-br from-pink to-pink-deep text-white border-none rounded-full py-2.5 px-7 text-[15px] font-sans cursor-pointer shadow-btn transition-all hover:scale-105"
+            @click="goInteractiveScene">ถัดไป 💌</button>
+        </div>
       </div>
     </div>
 
-    <!-- ══ BIRTHDAY: Main interaction ════════════════════════════════ -->
-    <div class="panel" :class="state==='birthday' ? 'visible':'hidden'">
-      <div class="birthday-card">
-        <h1>🎂 Happy Birthday!</h1>
-        <p class="subtitle">วันนี้เป็นวันพิเศษของเธอ — เธอมีความสุขไหม? 🌸</p>
-        <img :src="currentGif" alt="cute gif" class="birthday-gif">
-        <div class="btns">
-          <button class="btn-yes" :style="{fontSize: yesBtnSize+'px'}" id="yes-btn" @click="yesClick">
+    <!-- ══ SCENE 3: Interactive Birthday Stages ════════════════════════════════ -->
+    <div class="panel absolute inset-0 flex flex-col items-center justify-center px-4"
+      :class="state==='scene3' ? 'visible':'hidden'">
+      <div
+        class="bg-white border-4 border-pink rounded-[22px] py-[clamp(1.2rem,3vw,2rem)] px-[clamp(1.2rem,4vw,2.5rem)] text-center w-[min(500px,95vw)] shadow-pink-deep pointer-events-auto transition-all duration-300 transform">
+
+        <img :src="currentStage.img" onerror="this.src='https://media.tenor.com/76BaX0eo304AAAAj/kitty-kitty-heart.gif'"
+          alt="Memory"
+          class="w-[clamp(160px,50vw,260px)] h-[clamp(160px,50vw,260px)] object-cover rounded-2xl border-[3px] border-pink-soft shadow-pink mb-4 block mx-auto transition-all duration-500">
+
+        <p class="text-[clamp(0.95rem,2.5vw,1.15rem)] text-text-mid mb-6 min-h-[60px] leading-relaxed select-none">{{
+          currentStage.txt }}</p>
+
+        <div class="flex gap-2.5 flex-wrap justify-center items-center" v-if="!isFinalStage">
+          <button
+            class="bg-pink text-white border-none rounded-full font-sans cursor-pointer shadow-btn-soft transition-all duration-250 hover:shadow-btn-hover"
+            :style="{fontSize: yesBtnSize+'px', padding: yesBtnPadding}" @click="answerClick(true)">
             มีความสุขมาก 🎉
           </button>
-          <button v-if="noCount < 4" class="btn-no" id="no-btn" @click="noClick">
+          <button
+            class="bg-[#f8e0ec] text-text-mid border-2 border-pink-soft rounded-full font-sans text-base cursor-pointer transition-all duration-250 hover:bg-pink-soft"
+            :style="{padding: '12px 24px'}" @click="answerClick(false)">
             ยังไม่ค่อย 😢
           </button>
         </div>
-      </div>
-    </div>
 
-    <!-- ══ CAT TAUNT: Clicked Yes too fast! ══════════════════════════ -->
-    <div class="panel" :class="state==='catTaunt' ? 'visible':'hidden'"
-      style="justify-content:flex-end; padding-bottom:2.5rem;">
-      <div class="speech-card taunt-card">
-        <div class="cat-bubble taunt-bubble">
-          <p class="taunt-emoji">😾 ฮั่นแน่!</p>
-          <img src="https://media.tenor.com/w2340rodldAAAAAC/im-sulking.gif" alt="sulking cat"
-            style="width:120px; border-radius:12px; margin:0 auto 10px auto;">
-          <p class="cat-says">"ไม่ยอมเล่นด้วยเลยหรอ... เล่นตัวหน่อยสิ" 😤</p>
+        <div class="flex flex-col items-center justify-center mt-2" v-else>
+          <button
+            class="bg-gradient-to-br from-pink to-pink-deep text-white border-none rounded-full py-3 px-8 text-lg font-sans shadow-btn hover:scale-105 transition-all animate-[pulse_2s_ease_infinite]"
+            @click="startCelebrate">
+            รักทึ่สู้ดดด!! 💗🤏🏻
+          </button>
         </div>
-        <button class="btn-enter" style="margin-top:1rem; background:linear-gradient(135deg,#ff69b4,#c2177a);"
-          @click="goPlayAlong">
-          โอเค เล่นด้วย! 😅
-        </button>
       </div>
     </div>
 
-    <!-- ══ CELEBRATE ══════════════════════════════════════════════════ -->
-    <div class="panel celebrate-panel" :class="state==='celebrate' ? 'visible':'hidden'">
-      <div class="celebrate-card">
-        <div class="confetti-container" id="confetti-container"></div>
-        <h1>🎊 เย่เย่เย่!</h1>
-        <p style="font-family:'Dancing Script',cursive; font-size:1.5rem; color:#e91e8c; margin:.5rem 0;">
+    <!-- ══ SCENE 4: CELEBRATE ══════════════════════════════════════════════════ -->
+    <div class="panel absolute inset-0 flex flex-col items-center justify-center bg-pink-pale/65"
+      :class="state==='scene4' ? 'visible':'hidden'">
+      <div
+        class="bg-white border-4 border-pink rounded-[22px] py-[clamp(1.4rem,3vw,2.2rem)] px-[clamp(1.6rem,4vw,2.8rem)] text-center w-[min(480px,90vw)] shadow-pink-deep pointer-events-auto animate-[popIn_0.5s_cubic-bezier(0.175,0.885,0.32,1.275)_both] relative overflow-hidden tablet:w-[min(520px,90vw)] tablet:py-[2.2rem] tablet:px-12 desktop:w-[520px]">
+        <div class="absolute inset-0 pointer-events-none overflow-hidden" id="confetti-container"></div>
+        <h1
+          class="font-dancing text-[clamp(2rem,6vw,2.8rem)] text-pink-deep animate-[wiggle_1.6s_ease_infinite] tablet:text-[3rem] desktop:text-[3.2rem]">
+          🎊 เย่เย่เย่!</h1>
+        <p class="font-dancing text-2xl text-pink-deep my-2">
           ขอให้วันเกิดปีนี้สดใสนะ 💕
         </p>
-        <img :src="celebGif" alt="celebrate" class="birthday-gif">
-        <button class="btn-home" @click="goHome">🏠 กลับหน้าแรก</button>
+        <img src="https://media.giphy.com/media/3oriO0OEd9QIDdllqo/giphy.gif" alt="celebrate"
+          class="w-[clamp(160px,40vw,220px)] h-[clamp(160px,40vw,220px)] object-cover rounded-2xl border-[3px] border-pink-soft shadow-pink mb-4 block mx-auto tablet:w-[240px] tablet:h-[240px] desktop:w-[260px] desktop:h-[260px]">
+        <button
+          class="mt-2 bg-gradient-to-br from-pink to-pink-deep text-white border-none rounded-full py-3 px-7 text-base font-sans cursor-pointer shadow-btn-soft transition-transform duration-250 hover:scale-105 tablet:text-lg tablet:px-9"
+          @click="goHome">🏠 กลับหน้าแรก</button>
       </div>
     </div>
 
   </div><!-- #app -->
 
   <script type="module" src="scene.js"></script>
-
-  <script>
-    window.addEventListener('DOMContentLoaded', () => {
-      const { createApp, ref } = Vue;
-
-      const gifs = [
-        'https://media.tenor.com/76BaX0eo304AAAAj/kitty-kitty-heart.gif',
-        'https://media1.tenor.com/m/wVAjxnPa81IAAAAd/cat-cat-gif.gif',
-        'https://media1.tenor.com/m/f6ts3WWJa-8AAAAC/funny-cats-funny.gif',
-        'https://media1.tenor.com/m/kEZzd8WrRpAAAAAC/peach-peach-and-goma.gif',
-        'https://media.tenor.com/C35t4Pf5GlgAAAAi/peach-and-goma-cute.gif',
-      ];
-      const celebGif = 'https://media.giphy.com/media/3oriO0OEd9QIDdllqo/giphy.gif';
-
-      createApp({
-        setup() {
-          const state = ref('intro');
-          const doorReady = ref(false);
-          const zooming = ref(false);
-          const noCount = ref(0);
-          const yesBtnSize = ref(17);
-          const currentGif = ref(gifs[0]);
-          const hadTaunt = ref(false);
-
-          // Scene ready: fires when both door + cat models are loaded
-          document.addEventListener('sceneReady', () => { doorReady.value = true; });
-          setTimeout(() => { doorReady.value = true; }, 500);
-
-          // ── Enter: play door animation then zoom through ─────────────
-          function enterSite() {
-            if (zooming.value) return;
-            zooming.value = true;
-            const ts = window.threeScene;
-            if (ts && ts.enterDoor) {
-              ts.enterDoor(() => {
-                state.value = 'cat';
-                zooming.value = false;
-                ts.showCat(null);
-              });
-            } else {
-              state.value = 'cat';
-              zooming.value = false;
-            }
-          }
-
-          // ── Cat intro → Birthday ────────────────────────────────────
-          function goBirthday() {
-            state.value = 'birthday';
-            window.threeScene?.showBirthday();
-          }
-
-          // ── Yes click: taunt if first try, otherwise celebrate ──────
-          function yesClick() {
-            if (noCount.value === 0 && !hadTaunt.value) {
-              // First click without pressing No → cat taunts!
-              hadTaunt.value = true;
-              state.value = 'catTaunt';
-              window.threeScene?.showCatTaunt();
-            } else {
-              // Properly earned the yes, or already been taunted
-              state.value = 'celebrate';
-              window.threeScene?.showCelebrate();
-              setTimeout(spawnConfetti, 150);
-              spawnHearts();
-            }
-          }
-
-          // ── Cat says "play along" – back to birthday ────────────────
-          function goPlayAlong() {
-            state.value = 'birthday';
-            window.threeScene?.showBirthday();
-            // Reset no button so player HAS to press No at least once
-            // (hadTaunt is already true so next yes goes straight to celebrate)
-          }
-
-          // ── No click ─────────────────────────────────────────────────
-          function noClick() {
-            if (noCount.value < gifs.length - 1) {
-              noCount.value++;
-              currentGif.value = gifs[noCount.value];
-            }
-            yesBtnSize.value += 6;
-          }
-
-          // ── Home ─────────────────────────────────────────────────────
-          function goHome() { window.location.reload(); }
-
-          // ── Confetti ─────────────────────────────────────────────────
-          function spawnConfetti() {
-            const c = document.getElementById('confetti-container');
-            if (!c) return;
-            const cols = ['#ff69b4', '#ffb6c1', '#e91e8c', '#ff85c2', '#ffd700', '#fff'];
-            for (let i = 0; i < 90; i++) {
-              const el = document.createElement('div');
-              el.className = 'confetti-piece';
-              el.style.left = Math.random() * 100 + '%';
-              el.style.top = '-10px';
-              el.style.background = cols[Math.floor(Math.random() * cols.length)];
-              el.style.width = (Math.random() * 8 + 5) + 'px';
-              el.style.height = (Math.random() * 8 + 5) + 'px';
-              el.style.borderRadius = Math.random() > .5 ? '50%' : '3px';
-              el.style.animationDuration = (Math.random() * 2 + 2) + 's';
-              el.style.animationDelay = (Math.random()) + 's';
-              c.appendChild(el);
-              setTimeout(() => el.remove(), 4500);
-            }
-          }
-
-          // ── Heart burst ───────────────────────────────────────────────
-          function spawnHearts() {
-            const c = document.getElementById('hearts-container');
-            if (!c) return;
-            const emojis = ['💕', '💖', '💗', '💓', '🌸', '✨', '🎀'];
-            for (let i = 0; i < 22; i++) {
-              const h = document.createElement('div');
-              h.className = 'heart';
-              h.textContent = emojis[Math.floor(Math.random() * emojis.length)];
-              h.style.left = Math.random() * 100 + '%';
-              h.style.fontSize = (Math.random() * .9 + .7) + 'rem';
-              h.style.animationDuration = (Math.random() * 3 + 4) + 's';
-              h.style.animationDelay = (Math.random() * 1.5) + 's';
-              c.appendChild(h);
-              setTimeout(() => h.remove(), 8000);
-            }
-          }
-
-          // ── Ambient hearts ────────────────────────────────────────────
-          setInterval(() => {
-            const c = document.getElementById('hearts-container');
-            if (!c) return;
-            const emojis = ['💕', '🌸', '✨', '💖'];
-            const h = document.createElement('div');
-            h.className = 'heart';
-            h.textContent = emojis[Math.floor(Math.random() * emojis.length)];
-            h.style.left = Math.random() * 100 + '%';
-            h.style.fontSize = (Math.random() * .4 + .55) + 'rem';
-            h.style.animationDuration = (Math.random() * 4 + 5) + 's';
-            h.style.opacity = '0.4';
-            c.appendChild(h);
-            setTimeout(() => h.remove(), 10000);
-          }, 1400);
-
-          return {
-            state, doorReady, zooming, noCount, yesBtnSize, currentGif, celebGif,
-            enterSite, goBirthday, yesClick, goPlayAlong, noClick, goHome,
-          };
-        },
-      }).mount('#app');
-    });
-  </script>
+  <script src="app.js"></script>
 
 </body>
 
