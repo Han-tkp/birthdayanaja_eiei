@@ -136,7 +136,7 @@
     <div class="panel absolute inset-0 flex flex-col items-center justify-end pb-12"
       :class="state==='scene2' ? 'visible':'hidden'">
 
-      <!-- HANGING CAT -->
+      <!-- HANGING CAT (Simplified structure, logic handled in CSS/JS) -->
       <div v-show="state==='scene2'"
         class="absolute -top-10 left-0 w-full flex justify-center pointer-events-none z-[5] opacity-100 scale-75 tablet:scale-100">
         <div class="all-wrap">
@@ -160,103 +160,12 @@
                 </div>
                 <div class="cat-lower-wrap">
                   <div class="cat-lower">
-                    <div class="cat-leg">
-                      <div class="cat-leg">
-                        <div class="cat-leg">
-                          <div class="cat-leg">
-                            <div class="cat-leg">
-                              <div class="cat-leg">
-                                <div class="cat-leg">
-                                  <div class="cat-leg">
-                                    <div class="cat-leg">
-                                      <div class="cat-leg">
-                                        <div class="cat-leg">
-                                          <div class="cat-leg">
-                                            <div class="cat-leg">
-                                              <div class="cat-leg">
-                                                <div class="cat-leg">
-                                                  <div class="cat-leg">
-                                                    <div class="cat-paw"></div>
-                                                  </div>
-                                                </div>
-                                              </div>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                    <!-- Dynamic legs/tail can be simplified or kept as is if CSS depends on nesting depth -->
+                    <div class="cat-legs-container flex justify-around w-full">
+                       <div class="leg-left"></div>
+                       <div class="leg-right"></div>
                     </div>
-                    <div class="cat-leg">
-                      <div class="cat-leg">
-                        <div class="cat-leg">
-                          <div class="cat-leg">
-                            <div class="cat-leg">
-                              <div class="cat-leg">
-                                <div class="cat-leg">
-                                  <div class="cat-leg">
-                                    <div class="cat-leg">
-                                      <div class="cat-leg">
-                                        <div class="cat-leg">
-                                          <div class="cat-leg">
-                                            <div class="cat-leg">
-                                              <div class="cat-leg">
-                                                <div class="cat-leg">
-                                                  <div class="cat-leg">
-                                                    <div class="cat-paw"></div>
-                                                  </div>
-                                                </div>
-                                              </div>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="cat-tail">
-                      <div class="cat-tail">
-                        <div class="cat-tail">
-                          <div class="cat-tail">
-                            <div class="cat-tail">
-                              <div class="cat-tail">
-                                <div class="cat-tail">
-                                  <div class="cat-tail">
-                                    <div class="cat-tail">
-                                      <div class="cat-tail">
-                                        <div class="cat-tail">
-                                          <div class="cat-tail">
-                                            <div class="cat-tail">
-                                              <div class="cat-tail">
-                                                <div class="cat-tail">
-                                                  <div class="cat-tail -end"></div>
-                                                </div>
-                                              </div>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                    <div class="cat-tail-wrap"></div>
                   </div>
                 </div>
               </div>
@@ -267,7 +176,7 @@
       <!-- END HANGING CAT -->
 
       <div
-        class="w-[min(480px,94vw)] bg-white/95 backdrop-blur-md border-[3px] border-dashed border-pink.deep rounded-[24px] px-6 py-6 text-center shadow-pink-lg pointer-events-auto z-10 animate-[popIn_0.5s_cubic-bezier(0.175,0.885,0.32,1.275)_both]">
+        class="w-[min(480px,94vw)] bg-white/95 backdrop-blur-md border-[3px] border-dashed border-pink-deep rounded-[24px] px-6 py-6 text-center shadow-pink-lg pointer-events-auto z-10 animate-[popIn_0.5s_cubic-bezier(0.175,0.885,0.32,1.275)_both]">
         <div
           class="text-[clamp(14px,3vw,17px)] text-text-mid leading-[1.8] min-h-[140px] text-left whitespace-pre-wrap font-sans transition-all duration-300"
           :class="{'sparkle-text': !envelopeDone}" v-html="displayedEnvelopeText"></div>
@@ -288,14 +197,19 @@
       <div
         class="bg-white border-4 border-pink rounded-[22px] py-[clamp(1.2rem,3vw,2rem)] px-[clamp(1.2rem,4vw,2.5rem)] text-center w-[min(500px,95vw)] shadow-pink-deep pointer-events-auto transition-all duration-300 transform">
 
-        <img :src="currentStage.img" onerror="this.src='https://media.tenor.com/76BaX0eo304AAAAj/kitty-kitty-heart.gif'"
-          alt="Memory"
-          class="w-[clamp(160px,50vw,260px)] h-[clamp(160px,50vw,260px)] object-cover rounded-2xl border-[3px] border-pink-soft shadow-pink mb-4 block mx-auto transition-all duration-500">
+        <!-- Support both Image and Video -->
+        <div class="relative w-[clamp(160px,50vw,260px)] h-[clamp(160px,50vw,260px)] mx-auto mb-4">
+          <img v-if="!currentStage.isVideo" :src="currentStage.src" onerror="this.src='https://media.tenor.com/76BaX0eo304AAAAj/kitty-kitty-heart.gif'"
+            alt="Memory"
+            class="w-full h-full object-cover rounded-2xl border-[3px] border-pink-soft shadow-pink transition-all duration-500">
+          <video v-else :src="currentStage.src" autoplay loop muted playsinline
+            class="w-full h-full object-cover rounded-2xl border-[3px] border-pink-soft shadow-pink transition-all duration-500"></video>
+        </div>
 
         <p class="text-[clamp(0.95rem,2.5vw,1.15rem)] text-text-mid mb-6 min-h-[60px] leading-relaxed select-none">{{
           currentStage.txt }}</p>
 
-        <div class="flex gap-2.5 flex-wrap justify-center items-center" v-if="!isFinalStage">
+        <div class="flex gap-2.5 flex-wrap justify-center items-center relative" v-if="!isFinalStage">
           <button
             class="bg-pink text-white border-none rounded-full font-sans cursor-pointer shadow-btn-soft transition-all duration-250 hover:shadow-btn-hover"
             :style="{fontSize: yesBtnSize+'px', padding: yesBtnPadding}" @click="answerClick(true)">
@@ -303,7 +217,10 @@
           </button>
           <button
             class="bg-[#f8e0ec] text-text-mid border-2 border-pink-soft rounded-full font-sans text-base cursor-pointer transition-all duration-250 hover:bg-pink-soft"
-            :style="{padding: '12px 24px'}" @click="answerClick(false)">
+            :class="{'absolute': noBtnEscaping}"
+            :style="noBtnStyle"
+            @mouseover="handleNoHover"
+            @click="answerClick(false)">
             ยังไม่ค่อย 😢
           </button>
         </div>
@@ -337,6 +254,15 @@
           @click="goHome">🏠 กลับหน้าแรก</button>
       </div>
     </div>
+
+    <!-- Background Music -->
+    <audio id="bg-music" loop>
+      <source src="music/LANDOKMAI - เพลงรักเพลงแรก (Blooming) [Official MV].mp3" type="audio/mpeg">
+    </audio>
+    <button @click="toggleMusic" class="fixed bottom-4 right-4 z-50 bg-white/50 backdrop-blur-sm p-3 rounded-full shadow-lg pointer-events-auto border-2 border-pink-soft hover:bg-white transition-all">
+      <span v-if="isPlaying">🔊</span>
+      <span v-else>muted 🔇</span>
+    </button>
 
   </div><!-- #app -->
 

@@ -3,21 +3,21 @@
 }
 
 .all {
-  top: 10rem;
+  top: 5rem;
   left: calc(50% - 2.5rem);
   position: absolute;
   width: 5rem;
   height: 5rem;
-  transform-origin: center -20rem;
+  transform-origin: center -10rem;
   animation: swing 7s cubic-bezier(0.5, 0, 0.5, 1) infinite both;
 }
 
 .all:before {
-  height: 20rem;
+  height: 10rem;
   width: 2px;
   background-color: #DB242A;
   left: calc(50% - 1px);
-  bottom: 20rem;
+  bottom: 10rem;
 }
 
 .yarn {

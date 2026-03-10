@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-// ── SHADERS FOR PORTAL AND FIREFLIES ──────────────────────────────────
+// ── SHADERS ──────────────────────────────────────────────────────────
 const portalVertexShader = `
   varying vec2 vUv;
   void main() {
@@ -18,7 +18,6 @@ const portalFragmentShader = `
   uniform vec3 uColorStart;
   uniform vec3 uColorEnd;
   varying vec2 vUv;
-  // Classic Perlin 3D Noise 
   vec4 permute(vec4 x){return mod(((x*34.0)+1.0)*x, 289.0);}
   vec4 taylorInvSqrt(vec4 r){return 1.79284291400159 - 0.85373472095314 * r;}
   vec3 fade(vec3 t) {return t*t*t*(t*(t*6.0-15.0)+10.0);}
@@ -69,47 +68,17 @@ const portalFragmentShader = `
   }
 `;
 
-const firefliesVertexShader = `
-  uniform float uPixelRatio;
-  uniform float uSize;
-  uniform float uTime;
-  attribute float aScale;
-  void main() {
-    vec4 modelPosition = modelMatrix * vec4(position, 1.0);
-    modelPosition.y += sin(uTime + modelPosition.x * 100.0) * aScale * 0.2;
-    modelPosition.z += cos(uTime + modelPosition.x * 100.0) * aScale * 0.2;
-    modelPosition.x += cos(uTime + modelPosition.x * 100.0) * aScale * 0.2;
-    vec4 viewPosition = viewMatrix * modelPosition;
-    vec4 projectionPostion = projectionMatrix * viewPosition;
-    gl_Position = projectionPostion;
-    gl_PointSize = uSize * aScale * uPixelRatio;
-    gl_PointSize *= (1.0 / - viewPosition.z);
-  }
-`;
-
-const firefliesFragmentShader = `
-  void main() {
-    float distanceToCenter = distance(gl_PointCoord, vec2(0.5));
-    float strength = 0.05 / distanceToCenter - 0.1;
-    gl_FragColor = vec4(1.0, 1.0, 1.0, strength);
-  }
-`;
-
-
 // ── RENDERER ──────────────────────────────────────────────────────────
 const canvas = document.getElementById('three-canvas');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
-// renderer.toneMapping = THREE.ACESFilmicToneMapping; 
-// renderer.toneMappingExposure = 1.25;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 function syncCanvas() {
   const W = window.innerWidth, H = window.innerHeight;
   renderer.setSize(W, H, false);
-  canvas.style.cssText = `position:fixed;top:0;left:0;width:${W}px;height:${H}px;z-index:1;display:block;`;
   camera.aspect = W / H;
   camera.updateProjectionMatrix();
 }
@@ -119,8 +88,6 @@ window.addEventListener('resize', syncCanvas);
 const scene = new THREE.Scene();
 scene.background = new THREE.Color('#1e2243');
 const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 100);
-
-// เริ่มต้นกล้องอยู่ด้านนอกมองไปที่ประตู
 camera.position.set(0, 0.5, 3.8);
 camera.lookAt(0, 0.5, 0);
 syncCanvas();
@@ -150,17 +117,14 @@ function addB(w, h, d, x, y, z, m) {
   scene.add(b); return b;
 }
 
-// สร้างกรอบของประตู
-addB(DW + FT * 2, FT, 0.3, 0, DOOR_Y + DH / 2 + FT / 2, 0.1, woodMat); // top
-addB(FT, DH, 0.3, -DW / 2 - FT / 2, DOOR_Y, 0.1, woodMat); // left
-addB(FT, DH, 0.3, DW / 2 + FT / 2, DOOR_Y, 0.1, woodMat); // right
+addB(DW + FT * 2, FT, 0.3, 0, DOOR_Y + DH / 2 + FT / 2, 0.1, woodMat); 
+addB(FT, DH, 0.3, -DW / 2 - FT / 2, DOOR_Y, 0.1, woodMat); 
+addB(FT, DH, 0.3, DW / 2 + FT / 2, DOOR_Y, 0.1, woodMat); 
 
-// สร้างกำแพงล้อมรอบ (ซ้าย ขวา บน ล่าง) ไม่ให้ฉากลอยเคว้ง
 addB(10, DH + FT * 2, 0.1, -DW / 2 - FT - 5, DOOR_Y, 0.15, wallMat);
 addB(10, DH + FT * 2, 0.1, DW / 2 + FT + 5, DOOR_Y, 0.15, wallMat);
 addB(20, 10, 0.1, 0, DOOR_Y + DH / 2 + FT + 5, 0.15, wallMat);
 addB(20, 10, 0.1, 0, DOOR_Y - DH / 2 - 5, 0.15, wallMat);
-
 
 const doorPivot = new THREE.Group();
 doorPivot.position.set(-DW / 2, DOOR_Y, 0.05);
@@ -175,17 +139,16 @@ const knob = new THREE.Mesh(new THREE.SphereGeometry(0.06, 32, 32), knobMat);
 knob.position.set(DW - 0.15, 0, 0.1);
 doorPivot.add(knob);
 
-// ── FLOATING HEARTS OUTSIDE DOOR ──────────────────────────────────────
+// ── FLOATING HEARTS ──────────────────────────────────────────────────
 const heartsList = [];
 const heartShape = new THREE.Shape();
-const hX = 0, hY = 0;
-heartShape.moveTo(hX + 5, hY + 5);
-heartShape.bezierCurveTo(hX + 5, hY + 5, hX + 4, hY, hX, hY);
-heartShape.bezierCurveTo(hX - 6, hY, hX - 6, hY + 7, hX - 6, hY + 7);
-heartShape.bezierCurveTo(hX - 6, hY + 11, hX - 3, hY + 15.4, hX + 5, hY + 19);
-heartShape.bezierCurveTo(hX + 12, hY + 15.4, hX + 16, hY + 11, hX + 16, hY + 7);
-heartShape.bezierCurveTo(hX + 16, hY + 7, hX + 16, hY, hX + 10, hY);
-heartShape.bezierCurveTo(hX + 7, hY, hX + 5, hY + 5, hX + 5, hY + 5);
+heartShape.moveTo(5, 5);
+heartShape.bezierCurveTo(5, 5, 4, 0, 0, 0);
+heartShape.bezierCurveTo(-6, 0, -6, 7, -6, 7);
+heartShape.bezierCurveTo(-6, 11, -3, 15.4, 5, 19);
+heartShape.bezierCurveTo(12, 15.4, 16, 11, 16, 7);
+heartShape.bezierCurveTo(16, 7, 16, 0, 10, 0);
+heartShape.bezierCurveTo(7, 0, 5, 5, 5, 5);
 const heartGeo = new THREE.ExtrudeGeometry(heartShape, { depth: 1, bevelEnabled: true, bevelSegments: 2, steps: 1, bevelSize: 1, bevelThickness: 1 });
 heartGeo.scale(0.015, 0.015, 0.015);
 heartGeo.rotateZ(Math.PI);
@@ -194,20 +157,16 @@ const glowMat = new THREE.MeshStandardMaterial({ color: 0xffb6c1, emissive: 0xff
 for (let i = 0; i < 10; i++) {
   const hMesh = new THREE.Mesh(heartGeo, glowMat);
   hMesh.position.set((Math.random() - 0.5) * 4.5, FLOOR_Y + Math.random() * 3 + 0.5, 0.3 + Math.random() * 0.8);
-  hMesh.rotation.z = (Math.random() - 0.5) * 0.5;
   scene.add(hMesh);
-  heartsList.push({ mesh: hMesh, speedY: Math.random() * 0.005 + 0.005, phaseX: Math.random() * Math.PI * 2, startY: hMesh.position.y });
+  heartsList.push({ mesh: hMesh, speedY: Math.random() * 0.005 + 0.005, phaseX: Math.random() * Math.PI * 2 });
 }
 
-
-// ── 3D PORTAL (GLTF) ──────────────────────────────────────────────────
+// ── PORTAL ROOM ──────────────────────────────────────────────────────
 const roomGroup = new THREE.Group();
-roomGroup.position.set(0, FLOOR_Y + 0.8, -2.5); // ถอยไปด้านหลังเพื่อให้พอร์ทัลอยู่หลังประตู
+roomGroup.position.set(0, FLOOR_Y + 0.8, -10); // ขยับพอร์ทัลไปให้ไกลขึ้น (Z = -10)
 scene.add(roomGroup);
 
 let portalLightMaterial;
-let firefliesMaterial;
-
 const loader = new GLTFLoader();
 const textureLoader = new THREE.TextureLoader();
 
@@ -215,14 +174,11 @@ const bakedTexture = textureLoader.load('https://assets.codepen.io/22914/baked-0
 bakedTexture.flipY = false;
 bakedTexture.colorSpace = THREE.SRGBColorSpace;
 const bakedRoomMat = new THREE.MeshBasicMaterial({ map: bakedTexture });
-
 const poleLightMaterial = new THREE.MeshBasicMaterial({ color: "#f0bf94" });
 
 portalLightMaterial = new THREE.ShaderMaterial({
   vertexShader: portalVertexShader,
   fragmentShader: portalFragmentShader,
-  transparent: false,
-  blending: THREE.AdditiveBlending,
   uniforms: {
     uTime: { value: 0 },
     uColorStart: { value: new THREE.Color("#b91fac") },
@@ -230,107 +186,93 @@ portalLightMaterial = new THREE.ShaderMaterial({
   }
 });
 
-loader.load('https://assets.codepen.io/22914/portal-2.glb',
-  (gltf) => {
-    const bakedMesh = gltf.scene.children.find((child) => child.name === "baked");
+loader.load('https://assets.codepen.io/22914/portal-2.glb', (gltf) => {
+    const bakedMesh = gltf.scene.children.find(c => c.name === "baked");
     if (bakedMesh) bakedMesh.material = bakedRoomMat;
-
-    const portalLight = gltf.scene.children.find((child) => child.name === "portalCircle");
+    const portalLight = gltf.scene.children.find(c => c.name === "portalCircle");
     if (portalLight) portalLight.material = portalLightMaterial;
-
-    gltf.scene.children.filter((child) => child.name.includes("lampLight")).forEach((light) => {
-      light.material = poleLightMaterial;
-    });
+    gltf.scene.children.filter(c => c.name.includes("lampLight")).forEach(l => l.material = poleLightMaterial);
 
     gltf.scene.scale.set(1.4, 1.4, 1.4);
-    // หมุนแกน Y ให้ประตูมิติหันหน้าเข้าหากล้อง
-    gltf.scene.rotation.y = -Math.PI / 2;
-    // ถอยพอร์ตัลไปด้านหลัง (ให้สะพานทอดยาวมาหากล้อง)
-    gltf.scene.position.set(0, -0.8, -1.5);
-
+    // หมุนให้หันมาทางประตูบ้าน (Math.PI = 180 องศา)
+    gltf.scene.rotation.y = Math.PI; 
+    gltf.scene.position.set(0, -0.8, 0);
     roomGroup.add(gltf.scene);
+    document.dispatchEvent(new CustomEvent('threeReady'));
+});
 
-    // -- Add Fireflies --
-    const firefliesGeometry = new THREE.BufferGeometry();
-    const firefliesCount = 45;
-    const positionArray = new Float32Array(firefliesCount * 3);
-    const scaleArray = new Float32Array(firefliesCount);
-    for (let i = 0; i < firefliesCount; i++) {
-      new THREE.Vector3(
+// ── FLOATING SPHERES (The Gallery) ────────────────────────────────────
+const spheres = [];
+const mediaSources = [
+    { type: 'img', src: 'pictures/13395.jpeg' },
+    { type: 'img', src: 'pictures/13396.jpeg' },
+    { type: 'img', src: 'pictures/ฉากแรกเย้ๆ.jpg' },
+    { type: 'img', src: 'pictures/ฉากสุดท้าย.jpeg' },
+    { type: 'img', src: 'pictures/ฉากอวยพร.jpeg' },
+    { type: 'img', src: 'pictures/ฉากอวยพรแรก.jpeg' },
+    { type: 'vid', src: 'video/13397.mp4' },
+    { type: 'vid', src: 'video/13398.mp4' },
+    { type: 'vid', src: 'video/13399.mp4' },
+    { type: 'vid', src: 'video/13400.mp4' },
+    { type: 'vid', src: 'video/13401.mp4' }
+];
+
+// เตรียม Video Elements ล่วงหน้า
+const videoElements = mediaSources.filter(m => m.type === 'vid').map(m => {
+    const v = document.createElement('video');
+    v.src = m.src; v.loop = true; v.muted = true; v.play();
+    return new THREE.VideoTexture(v);
+});
+
+const sphereGeo = new THREE.SphereGeometry(0.35, 32, 32);
+
+for (let i = 0; i < 16; i++) {
+    const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3, metalness: 0.2 });
+    const s = new THREE.Mesh(sphereGeo, mat);
+    
+    // วางตำแหน่งสุ่มระหว่างทาง (Z จาก -1 ถึง -8)
+    s.position.set(
         (Math.random() - 0.5) * 6,
         Math.random() * 2.5 - 0.5,
-        (Math.random() - 0.5) * 6
-      ).toArray(positionArray, i * 3);
-      scaleArray[i] = Math.random();
-    }
-    firefliesGeometry.setAttribute("position", new THREE.BufferAttribute(positionArray, 3));
-    firefliesGeometry.setAttribute("aScale", new THREE.BufferAttribute(scaleArray, 1));
-
-    firefliesMaterial = new THREE.ShaderMaterial({
-      vertexShader: firefliesVertexShader,
-      fragmentShader: firefliesFragmentShader,
-      transparent: true,
-      uniforms: {
-        uTime: { value: 0 },
-        uPixelRatio: { value: Math.min(window.devicePixelRatio, 2) },
-        uSize: { value: 120 }
-      },
-      blending: THREE.AdditiveBlending,
-      depthWrite: false
+        -1 - Math.random() * 8
+    );
+    s.visible = false; // จะโชว์เมื่อเข้าประตูไปแล้ว
+    scene.add(s);
+    spheres.push({ 
+        mesh: s, 
+        timer: 0, 
+        isVid: false,
+        floatOffset: Math.random() * Math.PI * 2 
     });
-    const fireflies = new THREE.Points(firefliesGeometry, firefliesMaterial);
-    roomGroup.add(fireflies);
+}
 
-    document.dispatchEvent(new CustomEvent('threeReady'));
-  },
-  undefined,
-  (e) => {
-    console.error("Room load error", e);
-    document.dispatchEvent(new CustomEvent('threeReady')); // Proceed anyway
-  }
-);
+function updateSphereMedia(sObj) {
+    const source = mediaSources[Math.floor(Math.random() * mediaSources.length)];
+    if (source.type === 'img') {
+        textureLoader.load(source.src, (tex) => {
+            sObj.mesh.material.map = tex;
+            sObj.mesh.material.needsUpdate = true;
+            sObj.isVid = false;
+            sObj.timer = 1.0; // 1 second for images
+        });
+    } else {
+        const vidTex = videoElements[Math.floor(Math.random() * videoElements.length)];
+        sObj.mesh.material.map = vidTex;
+        sObj.mesh.material.needsUpdate = true;
+        sObj.isVid = true;
+        sObj.timer = 3.0; // 3 seconds for videos
+    }
+}
 
-// ── ENVELOPE (Floating 3D object for Message Scene) ─────────────────
+// ── ENVELOPE (HIDDEN) ────────────────────────────────────────────────
 const envGroup = new THREE.Group();
-envGroup.position.set(0, 0.3, -3.2); // เข้าห้องไปหน่อยนึง
 envGroup.visible = false;
 scene.add(envGroup);
 
-// สร้างซองจดหมายให้ดู Premium ขึ้น
-const envBodyMat = new THREE.MeshPhysicalMaterial({
-  color: 0xffe4ec, roughness: 0.2, metalness: 0.1, clearcoat: 0.4
-});
-const envFlapMat = new THREE.MeshPhysicalMaterial({
-  color: 0xffb6c1, roughness: 0.2, metalness: 0.1, clearcoat: 0.5
-});
-const sealMat = new THREE.MeshPhysicalMaterial({
-  color: 0xe91e8c, roughness: 0.1, metalness: 0.6, clearcoat: 0.8
-});
-
-const envBody = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.0, 0.04), envBodyMat);
-envBody.castShadow = true;
-
-const envFlap = new THREE.Mesh(new THREE.ConeGeometry(0.85, 0.6, 4), envFlapMat);
-envFlap.rotation.y = Math.PI / 4;
-envFlap.rotation.x = Math.PI / 2;
-envFlap.position.set(0, 0.5, 0.025);
-envGroup.add(envBody, envFlap);
-
-const seal = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.03, 32), sealMat);
-seal.rotation.x = Math.PI / 2;
-seal.position.set(0, 0.3, 0.05);
-// หัวใจนูนบนตั่งซีล
-const miniHeartMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.1 });
-const miniHeart = new THREE.Mesh(heartGeo.clone(), miniHeartMat);
-miniHeart.scale.set(0.2, 0.2, 0.05); // Tiny
-miniHeart.position.set(0.04, 0.04, 0.02);
-seal.add(miniHeart);
-envGroup.add(seal);
-
-
-// ── TWEEN SYSTEM ──────────────────────────────────────────────────────
+// ── TWEEN & ANIMATION ────────────────────────────────────────────────
 let phase = 'idle';
 let currentTween = null;
+let cameraLookTarget = new THREE.Vector3(0, 0.5, -10);
 
 function tween(ms, stepCb, doneCb) {
   const t0 = performance.now();
@@ -342,74 +284,47 @@ window.threeScene = {
   enterDoor(onDone) {
     phase = 'opening';
 
-    // 1. เปิดประตูช้าๆ
-    tween(1800, e => {
-      doorPivot.rotation.y = -Math.PI * 0.72 * e;
+    // 1. เปิดประตูให้กว้างขึ้น (145 องศา ~ 0.8 * PI)
+    tween(1500, e => {
+      doorPivot.rotation.y = -Math.PI * 0.8 * e;
     });
 
-    // 2. ซูมกล้องทะลุเข้าไปในห้อง (ประตูมิติ)
+    // 2. เริ่มเดินเข้าไป (Longer walk)
     setTimeout(() => {
       phase = 'zooming';
+      spheres.forEach(s => { s.mesh.visible = true; updateSphereMedia(s); });
+      
       const startZ = camera.position.z;
-      const startY = camera.position.y;
+      
+      tween(6000, e => {
+        // เดินไปจนถึงหน้าพอร์ทัล (Z = -9)
+        camera.position.z = startZ + (-9.5 - startZ) * e;
+        
+        // สุ่มการหันมองเล็กน้อย (Camera Sway)
+        const lookSwayX = Math.sin(e * 15) * 0.5;
+        const lookSwayY = Math.cos(e * 10) * 0.2;
+        cameraLookTarget.x = lookSwayX;
+        cameraLookTarget.y = 0.5 + lookSwayY;
+        camera.lookAt(cameraLookTarget);
 
-      tween(2500, e => {
-        camera.position.z = startZ + (-1.5 - startZ) * e; // หยุดที่สะพานไม้ พอดีกับภาพ
-        camera.position.y = startY + (0.0 - startY) * e;  // มองตรงๆ ระดับสายตา
+        // เมื่อเดินพ้นพอร์ทัล (Pass Z = -10) ให้เรียก Popup
+        if (camera.position.z < -8.5 && !window.popupTriggered) {
+            window.popupTriggered = true;
+            onDone && onDone();
+        }
       }, () => {
         phase = 'inside';
-        onDone && onDone();
       });
-    }, 800);
+    }, 1000);
   },
 
-  showEnvelope() {
-    phase = 'envelope';
-    envGroup.visible = true;
-
-    // เปลี่ยนมาเกิดจากบนขอบจอ (มือน้องแมว) ดิ่งลงมาตรงกลาง
-    envGroup.position.set(0, 3.5, -2.5); // จุดเริ่มต้นอยู่สูงและใกล้กล้อง
-    envGroup.scale.set(0.1, 0.1, 0.1);
-
-    tween(1500, e => {
-      // ขยายใหญ่ขึ้น
-      const s = 0.1 + (1.2 - 0.1) * e;
-      envGroup.scale.set(s, s, s);
-      // ตกลงมาจากด้านบน (โยน)
-      envGroup.position.y = 3.5 - (2.9 * e);
-      // พุ่งมาข้างหน้าเข้าหาตัว
-      envGroup.position.z = -2.5 + (0.3 * e);
-      // หมุนติ้วๆ แบบเท่ๆ
-      envGroup.rotation.x = Math.PI * 2 * e;
-      envGroup.rotation.z = Math.sin(Math.PI * e) * 0.5; // แกว่งซ้ายขวา
-    });
-  },
-
-  fastForwardEnvelope() {
-    // ข้าม Animation ซองจดหมายทันที
-    if (currentTween && phase === 'envelope') {
-      currentTween.active = false; // ยกเลิก tween ตัวเดิม
-    }
-    envGroup.scale.set(1.3, 1.3, 1.3);
-    envGroup.position.set(0, 0.6, -2.2);
-    envGroup.rotation.set(0, 0, 0); // ล็อกหน้าตรง
-  },
-
-  hideEnvelope() {
-    phase = 'interactive';
-    tween(500, e => {
-      envGroup.scale.set(1 - e, 1 - e, 1 - e);
-      envGroup.position.y = 0.6 - e;
-    }, () => {
-      envGroup.visible = false;
-    });
-  },
-
+  showEnvelope() { phase = 'envelope'; },
+  fastForwardEnvelope() {},
+  hideEnvelope() { phase = 'interactive'; },
   showCelebrate() {
     phase = 'celebrate';
-    const sr = camera.rotation.y;
     tween(2000, e => {
-      camera.rotation.y = sr + Math.sin(e * Math.PI * 2) * 0.18;
+      camera.rotation.y += Math.sin(e * Math.PI * 2) * 0.01;
     });
   }
 };
@@ -420,8 +335,8 @@ function animate() {
   requestAnimationFrame(animate);
   const now = performance.now();
   const t = clock.getElapsedTime();
+  const delta = clock.getDelta();
 
-  // จัดการ Tween
   if (currentTween && currentTween.active) {
     const raw = Math.min((now - currentTween.t0) / currentTween.ms, 1);
     const e = raw < 0.5 ? 2 * raw * raw : -1 + (4 - 2 * raw) * raw;
@@ -432,38 +347,27 @@ function animate() {
     }
   }
 
-  // Animation กล้องลอยหายใจเบาๆ
-  if (phase === 'inside' || phase === 'interactive' || phase === 'celebrate') {
-    camera.position.y = 0.3 + Math.sin(t * 1.5) * 0.04;
-    camera.position.x = Math.sin(t * 0.5) * 0.03;
-  }
+  // Animation ทรงกลมลอยและเปลี่ยนรูป
+  spheres.forEach(s => {
+    if (!s.mesh.visible) return;
+    s.mesh.position.y += Math.sin(t + s.floatOffset) * 0.002;
+    s.mesh.rotation.y += 0.01;
+    
+    s.timer -= delta;
+    if (s.timer <= 0) {
+        updateSphereMedia(s);
+    }
+  });
 
-  // Animation ซองจดหมายลอยตัว (ถ้าหยุดการหมุนเปิดแล้ว)
-  if (phase === 'envelope' && (!currentTween || !currentTween.active)) {
-    camera.position.y = 0.3 + Math.sin(t * 1.5) * 0.04;
-    envGroup.position.y = 0.6 + Math.sin(t * 3) * 0.06;
-    envGroup.rotation.z = Math.sin(t * 2) * 0.03;
-  }
-
-  // หิ่งห้อย & พอร์ทัล
-  if (portalLightMaterial) portalLightMaterial.uniforms.uTime.value = t;
-  if (firefliesMaterial) firefliesMaterial.uniforms.uTime.value = t;
-
-  // เอฟเฟกต์หัวใจลอยหน้าประตูมิติ
-  if (phase === 'idle' || phase === 'opening' || phase === 'zooming') {
+  if (phase === 'idle' || phase === 'opening') {
     heartsList.forEach(obj => {
       obj.mesh.position.y += obj.speedY;
       obj.mesh.position.x += Math.sin(t + obj.phaseX) * 0.003;
-      // reset
-      if (obj.mesh.position.y > DOOR_Y + DH + 1) {
-        obj.mesh.position.y = FLOOR_Y;
-      }
+      if (obj.mesh.position.y > 2) obj.mesh.position.y = FLOOR_Y;
     });
-  } else {
-    // หุบหัวใจลงไปเมื่อเข้าห้อง
-    heartsList.forEach(obj => { obj.mesh.visible = false; });
   }
 
+  if (portalLightMaterial) portalLightMaterial.uniforms.uTime.value = t;
   renderer.render(scene, camera);
 }
 animate();
